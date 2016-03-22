@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.mybatis.mapper.UserMapper" >
+
+	<!-- 
+		sql 片段，可以供其他的sql一起使用
+		建议以单表抽取查询条件
+	 -->
+	 <sql id="query_for_user">
+		<if test=" user != null ">
+			<if test=" user.name != null and user.name != '' ">
+				and name like '%${user.name}%'
+			</if>
+			<if test=" user.sex != null and user.sex != '' ">
+				and sex = #{user.sex}
+			</if>
+		</if>
+		
+		<if test="ids != null">
+		 	<foreach collection="ids" separator="or" item="item" open="and (" close=")">
+		 		id = #{item}
+		 	</foreach>
+	 	</if>
+	 </sql>
+	 
+
+	<select id="findUserById" parameterType="int" resultType="com.mybatis.bean.User">
+		SELECT * FROM USER WHERE id = #{id}
+	</select>
+	
+	<!-- 
+		#{} 表示占位符，#{}可以使用value或者其他字符，可以防止sql注入，使用时无需考虑参数的类型
+		${} 表示sql拼接，把原始的内容不加修饰的放入sql中，${}只能使用value，不可以防止sql注入，必须考虑参数的类型
+		一般在没有特殊情况下使用#{}为主
+		有些情况必须使用${}，比如
+			动态拼接表名：select * from ${tablename}, 如果使用了#{}则会在传入的表名上加单引号 ''
+			动态拼接排序字段：select * from user order by ${username}
+			
+		举个栗子：
+		查询日期的区别：
+			select * from user where birthday >= #{date}
+			select * from user where birthday >= to_date('${date}', 'yyyy-MM-dd')
+	 -->
+	
+	<select id="findUserList" parameterType="java.lang.String" resultType="com.mybatis.bean.User" >
+		select * from user where name like '%${value}%'
+	</select>
+	
+	<insert id="insertUser" parameterType="com.mybatis.bean.User">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+		    select LAST_INSERT_ID()
+		</selectKey>
+		insert into user(name,age,sex) values(#{name},#{age},#{sex})
+	</insert>
+	
+	<delete id="deleteUser" parameterType="int">
+	   delete from user where id=#{id}
+	</delete>
+	
+	<update id="updateUser" parameterType="com.mybatis.bean.User">
+	   update user set name=#{name},age=#{age},sex=#{sex}  where id=#{id}
+	</update>
+	
+	<select id="findUserByBean" parameterType="User" resultType="User">
+		select * from user where name like '%${name}%' and sex = #{sex}
+	</select>
+	
+	<select id="findUserByMap" parameterType="hashmap" resultType="User">
+		select * from user where name like '%${name}%' and age >= #{age}
+	</select>
+	
+	<!-- 
+		parameterMap 已经过期不建议使用, 官方已经废除
+		resultMap 不建议使用，太复杂
+	 -->
+	<select id="findUserByCustom" parameterType="QueryVo" resultType="User">
+		select * from user 
+		
+		<!-- 
+			where标签自动将 where后的第一个and去掉，比where 1=1 and 要好很多
+			where name like '%${user.name}%' and sex = #{user.sex}	
+		 -->
+<!-- 		<where> -->
+<!-- 			<if test=" user != null "> -->
+<!-- 				<if test=" user.name != null and user.name != '' "> -->
+<!-- 					and name like '%${user.name}%' -->
+<!-- 				</if> -->
+<!-- 				<if test=" user.sex != null and user.sex != '' "> -->
+<!-- 					and sex = #{user.sex} -->
+<!-- 				</if> -->
+<!-- 			</if> -->
+<!-- 		</where> -->
+		
+		<where>
+			<include refid="query_for_user"></include>
+		</where>
+		
+	</select>
+	
+	<!-- 
+		不建议使用map作为返回值，因为在代码中需要对key进行硬编码
+	 -->
+<!-- 	<select id="findUserMapByCustom" parameterType="QueryVo"  resultType="hashmap"> -->
+<!-- 		select * from user where name like '%${user.name}%' and sex >= #{user.sex} -->
+<!-- 	</select> -->
+
+	<update id="updateUserSet" parameterType="User">   
+	    update user
+	    <set>   
+	        <if test="name != null and name != '' ">   
+	            name = #{name}, 
+	        </if>   
+	        <if test="age != null and age != '' and age != 0 ">   
+	            age = #{age},
+	        </if>  
+	        <if test="sex != null and sex != '' ">   
+	            sex = #{sex},
+	        </if>   
+	    </set>   
+	    where id = #{id};    
+	</update>     
+	
+</mapper>
